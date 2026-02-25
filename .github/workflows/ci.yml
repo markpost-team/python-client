@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync --group dev
+      - run: uv run ruff format --check .
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: format
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync --group dev
+      - run: uv run ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      matrix:
+        include:
+          - python-version: "3.8"
+            tox-env: "py38"
+          - python-version: "3.9"
+            tox-env: "py39"
+          - python-version: "3.10"
+            tox-env: "py310"
+          - python-version: "3.11"
+            tox-env: "py311"
+          - python-version: "3.12"
+            tox-env: "py312"
+          - python-version: "3.13"
+            tox-env: "py313"
+          - python-version: "3.14"
+            tox-env: "py314"
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uvx --from tox --with tox-uv tox -e ${{ matrix.tox-env }}
