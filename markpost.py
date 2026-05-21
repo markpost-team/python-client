@@ -77,7 +77,7 @@ class Client:
 
     def _handle_response(self, response):
         """Parse response and handle errors"""
-        if response.status_code == 200:
+        if 200 <= response.status_code < 300:
             return response.json()
 
         # Handle errors
@@ -206,7 +206,7 @@ class Client:
         else:
             url = self._build_url(f"/{post_id}")
             response = self._session.get(url)
-            if response.status_code != 200:
+            if not (200 <= response.status_code < 300):
                 self._handle_response(response)  # Will raise error
             return response.text
 

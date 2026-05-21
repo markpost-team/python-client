@@ -106,6 +106,15 @@ class TestClientInternals:
         result = client._handle_response(response)
         assert result == {"id": "abc123"}
 
+    def test_handle_response_201(self):
+        """Test _handle_response with 201 Created"""
+        client = markpost.Client("http://localhost:7330")
+        response = mock.Mock()
+        response.status_code = 201
+        response.json.return_value = {"id": "abc123"}
+        result = client._handle_response(response)
+        assert result == {"id": "abc123"}
+
     def test_handle_response_404(self):
         """Test _handle_response raises MarkpostNotFoundError on 404"""
         client = markpost.Client("http://localhost:7330")
@@ -292,7 +301,8 @@ class TestClientInternals:
         client._post_key = "my-post-key"
 
         mock_response = mock.Mock()
-        mock_response.status_code = 200
+        mock_response = mock.Mock()
+        mock_response.status_code = 201
         mock_response.json.return_value = {"id": "abc123"}
 
         with mock.patch.object(
