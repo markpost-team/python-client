@@ -1,0 +1,30 @@
+# Static security analysis (CodeQL) for the Python source.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # 04:00 UTC weekly.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e58424170fb0262c8d7ed60a2e84b9bffe205c67  # codeql-bundle-v2.26.1
+        with:
+          languages: python
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@e58424170fb0262c8d7ed60a2e84b9bffe205c67  # codeql-bundle-v2.26.1

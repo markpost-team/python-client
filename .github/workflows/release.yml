@@ -1,0 +1,130 @@
+# Release pipeline, triggered by pushing a version tag (v*).
+#
+# Flow:
+#   1. build   — gated on v* tags. Deliberately has only contents:read and NO
+#                id-token:write, so package-build code cannot mint a PyPI
+#                publishing token. Builds sdist+wheel and uploads it as an
+#                artifact. Also extracts the changelog section for the release
+#                notes.
+#   2. publish — consumes the artifact under the protected `pypi` environment
+#                with id-token:write and publishes via PyPI Trusted Publishing
+#                (OIDC) — no long-lived token in the repo at all.
+#   3. release — creates the GitHub Release. RC tags (containing "-rc") are
+#                marked as prerelease and excluded from "latest"; stable tags
+#                become the latest release.
+#
+# To cut a release: bump the version in pyproject.toml + markpost/__init__.py,
+# update CHANGELOG.md, commit, then `git tag v<x.y.z> && git push origin v<x.y.z>`.
+#
+# PyPI setup (one-time, by a maintainer):
+#   pypi.org -> markpost -> Publishing -> add a Trusted Publisher with
+#   repository=markpost-team/python-client, workflow=release.yml, environment=pypi.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distribution
+    runs-on: ubuntu-latest
+    # NOTE: contents:read only, no id-token:write — build code cannot publish.
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      is_prerelease: ${{ steps.meta.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: scripts/install
+
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          # Strip the leading "v" -> "0.2.0-rc.2"
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-rc* ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build sdist + wheel
+        run: uv build
+      - name: Validate metadata
+        run: uv run twine check dist/*
+
+      - name: Extract changelog section for release notes
+        id: notes
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          awk "/\\[${VERSION}\\]/{flag=1; next} /^## \\[/{flag=0} flag" CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "::error::No [${VERSION}] section found in CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Upload distribution artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload release notes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: release-notes
+          path: release_notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write  # OIDC for PyPI Trusted Publishing.
+    steps:
+      - name: Download distribution artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish to PyPI (Trusted Publishing, no token)
+        uses: pypa/gh-action-pypi-publish@2834a314042ef964da07689278dd1e9d773e8afd  # v1.14.1
+
+  release:
+    name: Create GitHub Release
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Download release notes
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: release-notes
+          path: .
+      - name: Create Release
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8  # v2.3.2
+        with:
+          body_path: release_notes.md
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          prerelease: ${{ needs.build.outputs.is_prerelease }}
+          make_latest: ${{ needs.build.outputs.is_prerelease != 'true' }}
+          generate_release_notes: false

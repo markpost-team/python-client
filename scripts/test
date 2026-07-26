@@ -1,0 +1,10 @@
+#!/bin/sh
+# Run the unit test suite under coverage (fast, mocked transport). Extra args
+# are forwarded to pytest, e.g. ``scripts/test -- tests/unit/test_posts.py``.
+#
+# E2E tests (marked ``e2e``) are deselected here; run them via tests/e2e/run.sh.
+#
+# Usage: scripts/test [pytest args...]
+set -eu
+
+uv run pytest -m "not e2e" --cov "$@"

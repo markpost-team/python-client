@@ -1,0 +1,9 @@
+#!/bin/sh
+# Build the sdist + wheel and validate the distribution metadata (catches a
+# broken README rendering or missing fields *before* publishing).
+#
+# Usage: scripts/build
+set -eu
+
+uv build
+uv run twine check dist/*

@@ -1,248 +1,175 @@
-# Markpost Python Client
-
 English | [简体中文](README_zh.md)
 
-Python client library for the [Markpost](https://markpost.cc) API.
+<div align="center">
+
+# Markpost Python Client
+
+**A typed, sync + async Python client for the [Markpost](https://markpost.cc) API.**
+
+[![PyPI version](https://img.shields.io/pypi/v/markpost.svg)](https://pypi.org/project/markpost/)
+[![Python versions](https://img.shields.io/pypi/pyversions/markpost.svg)](https://pypi.org/project/markpost/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
+[![CI](https://img.shields.io/github/actions/workflow/status/markpost-team/python-client/ci.yml?label=CI)](https://github.com/markpost-team/python-client/actions/workflows/ci.yml)
+
+</div>
+
+---
 
 ## Installation
 
+> Requires Python **>=3.9**.
+
 ```bash
 uv add markpost
+# or
+pip install markpost
 ```
 
 ## Quick Start
 
+### Sync
+
 ```python
-import markpost
+from markpost import Markpost
 
-# Create client and login
-client = markpost.Client("http://localhost:7330")
-client.login("admin", "changeme")
+with Markpost("https://markpost.cc", "alice", "secret") as client:
+    created = client.create_post("Hello", "# Body in **markdown**")
+    print(created.id)           # "p-<nanoid>"
 
-# Get your post key
-post_key = client.get_post_key()
-print(f"My post key: {post_key}")
+    html = client.get_post(created.id)               # full HTML page (str)
+    md = client.get_post(created.id, format="raw")   # "# Hello\n\n..." (str)
 
-# Create a post
-result = client.create_post(
-    title="My First Post",
-    body="# Hello World\n\nThis is **markdown** content."
-)
-print(f"Created post: {result['id']}")
+    page = client.list_posts(limit=20)
+    for item in page.items:
+        print(item.qid, item.title)
+```
 
-# Retrieve the post as HTML
-html = client.get_post(result['id'])
-print(html)
+### Async
 
-# Or retrieve as raw markdown
-post = client.get_post(result['id'], format="raw")
-print(post["title"])
-print(post["body"])
+```python
+from markpost import AsyncMarkpost
+
+async with AsyncMarkpost("https://markpost.cc", "alice", "secret") as client:
+    created = await client.create_post("Hello", "# Body")
+    html = await client.get_post(created.id)
+    page = await client.list_posts(limit=20)
 ```
 
 ## Authentication
 
-### Auto-login on initialization
+Pass `username` + `password` to the constructor to auto-login (sync logs in
+immediately; async logs in lazily on the first call or `__aenter__`):
 
 ```python
-client = markpost.Client(
-    base_url="http://localhost:7330",
-    username="admin",
-    password="changeme"
+client = Markpost("https://markpost.cc", username="alice", password="secret")
+```
+
+Or log in manually:
+
+```python
+client = Markpost("https://markpost.cc")
+result = client.login("alice", "secret")
+print(result.user.role, result.token)
+```
+
+The access token is refreshed **automatically** when it is about to expire or
+when the backend returns `401`. Concurrent refreshes are deduplicated into a
+single backend call (single-flight), which is essential because the backend
+rotates refresh tokens one-time and revokes the whole session on reuse.
+
+## Posts
+
+`create_post` authenticates with a **post key** (not a JWT). If you don't pass
+one, the client fetches and caches your post key automatically.
+
+```python
+created = client.create_post("Title", "body")               # auto-fetches post key
+created = client.create_post("Title", "body", post_key="mpk-...")
+```
+
+`get_post` returns a `str` (HTML by default, or markdown when `format="raw"`).
+It supports conditional requests via `If-None-Match`:
+
+```python
+etag = "...from a previous response..."
+result = client.get_post("p-abc", if_none_match=etag)
+# result is None when the backend returns 304 (not modified)
+```
+
+Pagination uses a flat structure:
+
+```python
+page = client.list_posts(page=2, limit=50)
+# page.items, page.total, page.page, page.limit, page.total_pages
+```
+
+## Delivery channels & history
+
+```python
+ch = client.create_channel(
+    kind="feishu",
+    name="ops-alerts",
+    configuration={"webhook_url": "https://...", "card_link_url": "https://..."},
+    keywords="",  # optional keyword filter expression
 )
+
+# PATCH semantics: pass only the fields you want to change.
+client.update_channel(ch.id, enabled=False)
+
+channels = client.list_channels()          # list[Channel] (no pagination)
+history = client.list_delivery_history(channel_id=ch.id)  # Page[DeliveryHistoryItem]
+latest = client.list_latest_delivery()     # list[DeliveryHistoryItem], one per channel
+
+# Send a diagnostic card to verify the webhook is wired up. Fire-and-forget:
+# the backend sends it synchronously but writes no delivery_history row.
+client.test_channel(ch.id)
 ```
 
-### Manual login
+## Error handling
+
+Errors are a typed hierarchy rooted at `MarkpostError`:
 
 ```python
-client = markpost.Client("http://localhost:7330")
-client.login("admin", "changeme")
-```
-
-### Token refresh
-
-The client automatically refreshes JWT tokens when they expire or when a 401 response is received.
-
-```python
-# Manual refresh (usually not needed)
-client.refresh_token()
-```
-
-### Change password
-
-```python
-client.change_password("old-password", "new-password")
-```
-
-## Post Operations
-
-### Create a post
-
-```python
-# Using stored post key (call get_post_key() first)
-post_key = client.get_post_key()
-result = client.create_post(
-    title="API Documentation",
-    body="## Overview\n\nThis API allows you to..."
+from markpost import (
+    MarkpostError, APIError,
+    BadRequestError, AuthenticationError, PermissionDeniedError,
+    NotFoundError, ConflictError, UnprocessableEntityError, RateLimitError,
+    InternalServerError, APITimeoutError, APIConnectionError,
 )
 
-# Or provide post key explicitly
-result = client.create_post(
-    title="My Post",
-    body="# Content",
-    post_key="your-post-key-here"
-)
-```
-
-### Retrieve a post
-
-```python
-# Get as HTML (default)
-html = client.get_post("abc123")
-
-# Get as raw markdown/JSON
-post = client.get_post("abc123", format="raw")
-print(post["qid"])      # "abc123"
-print(post["title"])    # Post title
-print(post["body"])     # Markdown content
-```
-
-### List posts
-
-```python
-# Get first page (default: 20 items)
-posts = client.get_posts()
-
-# Custom pagination
-posts = client.get_posts(page=2, page_size=10)
-
-for post in posts["items"]:
-    print(f"{post['qid']}: {post['title']}")
-```
-
-## Error Handling
-
-```python
 try:
-    client.create_post(title="", body="")
-except markpost.MarkpostAPIError as e:
-    print(f"API Error {e.status_code}: {e.message}")
-except markpost.MarkpostAuthError as e:
-    print(f"Authentication failed: {e.message}")
-except markpost.MarkpostNotFoundError as e:
-    print(f"Resource not found: {e.message}")
-except markpost.MarkpostConnectionError as e:
-    print(f"Connection error: {e}")
+    client.create_post("", "body")
+except UnprocessableEntityError as e:
+    print(e.status_code, e.code)   # 422 "title_too_long" / "required" / ...
+    for fe in e.errors:            # parsed per-field details
+        print(fe.field, fe.code, fe.message)
+except RateLimitError as e:
+    print(e.limit, e.remaining, e.reset)   # parsed from RateLimit-* headers
+except AuthenticationError as e:
+    print(e.code)                  # "invalid_credentials", "invalid_token", ...
+except APIError as e:
+    print(e.status_code, e.code, e.message)
 ```
 
-## Context Manager
+Timeouts and network errors map to `APITimeoutError` / `APIConnectionError`
+(both retried automatically). `5xx` and `429` are retried; `4xx` are not.
+
+## Configuration
 
 ```python
-with markpost.Client("http://localhost:7330") as client:
-    client.login("admin", "password")
-    posts = client.get_posts()
-# Session is automatically closed
-```
-
-## API Reference
-
-### Client
-
-```python
-Client(base_url, username=None, password=None)
-```
-
-Create a new Markpost client.
-
-**Parameters:**
-
-- `base_url` (str): Markpost server URL (e.g., "http://localhost:7330")
-- `username` (str, optional): Username for auto-login
-- `password` (str, optional): Password for auto-login
-
-### Authentication Methods
-
-#### `login(username, password)`
-
-Authenticate with username and password. Stores JWT token for subsequent requests.
-
-**Returns:** dict with token information
-
-#### `refresh_token()`
-
-Refresh the JWT token. Usually called automatically.
-
-**Returns:** dict with new token information
-
-#### `change_password(current_password, new_password)`
-
-Change the user's password.
-
-**Returns:** dict with success message
-
-### Post Methods
-
-#### `create_post(title, body, post_key=None)`
-
-Create a new post with markdown content.
-
-**Parameters:**
-
-- `title` (str): Post title
-- `body` (str): Markdown content
-- `post_key` (str, optional): Post key (uses stored key if not provided)
-
-**Returns:** dict with `id` field (nanoid string)
-
-#### `get_post(post_id, format='html')`
-
-Retrieve a post.
-
-**Parameters:**
-
-- `post_id` (str): Post nanoid
-- `format` (str): 'html' (default) or 'raw'
-
-**Returns:**
-
-- For HTML format: string with full HTML page
-- For raw format: dict with post details
-
-#### `get_posts(page=1, page_size=20)`
-
-List user's posts with pagination.
-
-**Parameters:**
-
-- `page` (int): Page number (starts at 1)
-- `page_size` (int): Items per page
-
-**Returns:** dict with `items` list and `total` count
-
-#### `get_post_key()`
-
-Get the current user's post key. Automatically stored for use in `create_post()`.
-
-**Returns:** str with post key
-
-## Development
-
-### Running Tests
-
-```bash
-uv run pytest
-```
-
-### Running Linters
-
-```bash
-ruff check .
+Markpost(
+    base_url,
+    username=None,
+    password=None,
+    *,
+    timeout=None,             # float | httpx.Timeout (defaults to a safe connect/read/write/pool split)
+    max_retries=2,             # 0 disables retries
+    post_key=None,             # pre-seed a post key
+    http_client=None,          # inject a custom httpx client (testing)
+    verify=True,               # set False for the self-signed e2e container
+)
 ```
 
 ## License
 
-MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+MIT License — see [LICENSE.txt](LICENSE.txt).

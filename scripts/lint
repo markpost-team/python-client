@@ -1,0 +1,11 @@
+#!/bin/sh
+# Lint gate: fail if ruff finds violations or the code is not formatted.
+#
+# To auto-fix instead (run locally, not in CI):
+#     uv run ruff check --fix . && uv run ruff format .
+#
+# Usage: scripts/lint
+set -eu
+
+uv run ruff check .
+uv run ruff format --check .

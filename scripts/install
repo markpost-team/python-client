@@ -1,0 +1,7 @@
+#!/bin/sh
+# Install/sync the dev environment (uv-managed venv + dev dependency group).
+#
+# Usage: scripts/install
+set -eu
+
+uv sync --group dev

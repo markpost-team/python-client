@@ -1,0 +1,80 @@
+# E2E environment for the Markpost Python SDK.
+#
+# The app runs from the published image on Docker Hub (pinned to the version
+# this client targets); the webhook mock is built in-tree so the SDK repo is
+# self-contained — no checkout of the sibling backend repo is required. The mock
+# receives the test cards sent by POST /delivery/channels/{id}/test and the real
+# deliveries dispatched on post creation. Rate limits are cranked high so tests
+# never trip a 429.
+#
+# Usage: see tests/e2e/run.sh
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: markpost_sdk_e2e
+      POSTGRES_USER: markpost
+      POSTGRES_PASSWORD: markpost
+    volumes:
+      - postgres-socket:/var/run/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U markpost -d markpost_sdk_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  webhook-mock:
+    # In-tree reimplementation of the backend's webhook mock. Receives POST
+    # /webhook and exposes GET /webhooks, POST /webhooks/clear, GET /health for
+    # assertions inside the e2e suite.
+    build:
+      context: ./webhook-mock
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3002/health || exit 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  app:
+    # Published markpost image (https://hub.docker.com/r/jukanntenn/markpost/tags).
+    # Pinned to the version this client release targets for reproducibility.
+    image: jukanntenn/markpost:v0.2.0-rc.2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      webhook-mock:
+        condition: service_healthy
+    volumes:
+      - postgres-socket:/var/run/postgresql
+    environment:
+      # Crank rate limits so the suite never triggers a 429.
+      MARKPOST_RATELIMIT__READ__PER_SECOND: "10000"
+      MARKPOST_RATELIMIT__READ__BURST: "10000"
+      MARKPOST_RATELIMIT__PUBLIC_WRITE__PER_SECOND: "10000"
+      MARKPOST_RATELIMIT__PUBLIC_WRITE__BURST: "10000"
+      MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_PER_SECOND: "10000"
+      MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_BURST: "10000"
+      MARKPOST_RATELIMIT__AUTHED_WRITE__PER_SECOND: "10000"
+      MARKPOST_RATELIMIT__AUTHED_WRITE__BURST: "10000"
+      MARKPOST_DB__DRIVER: postgresql
+      MARKPOST_DB__DSN: "host=/var/run/postgresql user=markpost password=markpost dbname=markpost_sdk_e2e sslmode=disable"
+      # Fixed signing keys so test runs are reproducible.
+      MARKPOST_JWT__ACCESS_SIGNING_KEY: "sdk-e2e-access-secret-key-min-32-char!!"
+      MARKPOST_JWT__REFRESH_SIGNING_KEY: "sdk-e2e-refresh-secret-key-min-32-char!!"
+      MARKPOST_SERVER__PUBLIC_URL: "http://localhost:2053"
+      GIN_MODE: release
+    ports:
+      - "2053:2053"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:2053/api/v1/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+volumes:
+  postgres-socket:

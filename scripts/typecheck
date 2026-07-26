@@ -1,0 +1,10 @@
+#!/bin/sh
+# Static type-checking gate (mypy, strict). We publish py.typed, so the library
+# is fully typed; the unit tests are checked too (with relaxed annotation rules,
+# see [tool.mypy] overrides in pyproject.toml). E2E tests are integration code
+# and are intentionally not part of this gate.
+#
+# Usage: scripts/typecheck
+set -eu
+
+uv run mypy markpost tests/unit

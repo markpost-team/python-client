@@ -1,0 +1,39 @@
+# End-to-end tests against the real markpost backend. The app runs from the
+# published image on Docker Hub and the webhook mock is built in-tree, so the
+# suite is self-contained — no checkout of the sibling backend repo is required.
+# Heavy and slow, so it is split out from the main CI gate and runs on a
+# schedule, on demand, or on a PR that opts in with the "run-e2e" label.
+name: E2E
+
+on:
+  schedule:
+    # 03:00 UTC nightly.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    # Only run on scheduled/manual, or on a PR carrying the run-e2e label.
+    if: >
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.label.name, 'run-e2e') ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-e2e'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: scripts/install
+
+      - name: Run e2e suite
+        run: cd tests/e2e && ./run.sh
