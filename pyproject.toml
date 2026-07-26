@@ -5,7 +5,7 @@ description = "Python client for the Markpost API (sync + async, typed)"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE.txt"]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "Markpost Team" }]
 keywords = ["markpost", "markdown", "api", "client", "sdk"]
 classifiers = [
@@ -13,7 +13,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -76,7 +75,7 @@ fail_under = 90
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]

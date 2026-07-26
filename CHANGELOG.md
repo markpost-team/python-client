@@ -36,7 +36,7 @@ First release candidate: a typed, sync + async Python client for the Markpost AP
 
 ### Changed
 
-- Requires Python **>=3.9**.
+- Requires Python **>=3.10**.
 - Built on `httpx` for the HTTP transport, providing a full async API.
 
 [0.2.0-rc.2]: https://github.com/markpost-team/python-client/releases/tag/v0.2.0-rc.2

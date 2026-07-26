@@ -17,7 +17,7 @@
 
 ## 安装
 
-> 需要 Python **>=3.9**。
+> 需要 Python **>=3.10**。
 
 ```bash
 uv add markpost
