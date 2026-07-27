@@ -30,9 +30,7 @@ def test_timeout_retried_then_success(logged_in_client, patched_sleep):
     respx.get(f"{BASE_URL}/api/v1/posts").mock(
         side_effect=[
             httpx.ConnectTimeout("timed out"),
-            httpx.Response(
-                200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-            ),
+            httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}),
         ]
     )
     result = logged_in_client.list_posts()
@@ -56,9 +54,7 @@ def test_connection_error_retried_then_success(logged_in_client, patched_sleep):
     respx.get(f"{BASE_URL}/api/v1/posts").mock(
         side_effect=[
             httpx.ConnectError("refused"),
-            httpx.Response(
-                200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-            ),
+            httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}),
         ]
     )
     result = logged_in_client.list_posts()
@@ -75,9 +71,7 @@ def test_429_retried_respecting_reset_header(logged_in_client, patched_sleep):
                 json={"code": "rate_limited", "message": "slow"},
                 headers={"RateLimit-Reset": "3"},
             ),
-            httpx.Response(
-                200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-            ),
+            httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}),
         ]
     )
     result = logged_in_client.list_posts()
@@ -92,9 +86,7 @@ def test_500_retried(logged_in_client, patched_sleep):
     respx.get(f"{BASE_URL}/api/v1/posts").mock(
         side_effect=[
             httpx.Response(500, json={"code": "internal", "message": "boom"}),
-            httpx.Response(
-                200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-            ),
+            httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}),
         ]
     )
     result = logged_in_client.list_posts()

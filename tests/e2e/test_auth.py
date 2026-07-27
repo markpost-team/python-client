@@ -31,17 +31,15 @@ def test_login_success(base_url):
 
 # E-A2 ------------------------------------------------------------------------
 def test_login_wrong_password(base_url):
-    with _client(base_url) as c:
-        with pytest.raises(AuthenticationError) as exc_info:
-            c.login(ADMIN_USER, "definitely-wrong")
+    with _client(base_url) as c, pytest.raises(AuthenticationError) as exc_info:
+        c.login(ADMIN_USER, "definitely-wrong")
     assert exc_info.value.code == "invalid_credentials"
 
 
 # E-A3 ------------------------------------------------------------------------
 def test_login_unknown_user(base_url):
-    with _client(base_url) as c:
-        with pytest.raises(AuthenticationError):
-            c.login("nobody-exists", "x")
+    with _client(base_url) as c, pytest.raises(AuthenticationError):
+        c.login("nobody-exists", "x")
 
 
 # E-A4 ------------------------------------------------------------------------

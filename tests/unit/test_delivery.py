@@ -43,9 +43,7 @@ def test_create_channel(logged_in_client):
     route = respx.post(f"{BASE_URL}/api/v1/delivery/channels").mock(
         return_value=httpx.Response(201, json={"channel": CHANNEL_BODY})
     )
-    ch = logged_in_client.create_channel(
-        "feishu", "ops", {"webhook_url": "https://hook"}, keywords="alert"
-    )
+    ch = logged_in_client.create_channel("feishu", "ops", {"webhook_url": "https://hook"}, keywords="alert")
     assert ch.id == 1
     sent = route.calls.last.request
     body = json.loads(sent.content)
@@ -93,9 +91,7 @@ def test_update_channel_all_omitted(logged_in_client):
 # U-D6: delete_channel --------------------------------------------------------
 @respx.mock
 def test_delete_channel(logged_in_client):
-    route = respx.delete(f"{BASE_URL}/api/v1/delivery/channels/1").mock(
-        return_value=httpx.Response(204)
-    )
+    route = respx.delete(f"{BASE_URL}/api/v1/delivery/channels/1").mock(return_value=httpx.Response(204))
     assert logged_in_client.delete_channel(1) is None
     assert route.called
 

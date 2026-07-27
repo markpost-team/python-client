@@ -17,9 +17,7 @@ from .conftest import BASE_URL
 @respx.mock
 def test_create_post_success(logged_in_client):
     # Match the root-level path with the post_key, NOT /api/v1.
-    route = respx.post(f"{BASE_URL}/mpk-mykey").mock(
-        return_value=httpx.Response(201, json={"id": "p-abc123"})
-    )
+    route = respx.post(f"{BASE_URL}/mpk-mykey").mock(return_value=httpx.Response(201, json={"id": "p-abc123"}))
     result = logged_in_client.create_post("Title", "body", post_key="mpk-mykey")
     assert result.id == "p-abc123"
     sent = route.calls.last.request
@@ -32,13 +30,9 @@ def test_create_post_success(logged_in_client):
 @respx.mock
 def test_create_post_auto_fetches_post_key(logged_in_client):
     pk = respx.get(f"{BASE_URL}/api/v1/post-key").mock(
-        return_value=httpx.Response(
-            200, json={"post_key": "mpk-fetched", "created_at": "2026-01-01T00:00:00Z"}
-        )
+        return_value=httpx.Response(200, json={"post_key": "mpk-fetched", "created_at": "2026-01-01T00:00:00Z"})
     )
-    create = respx.post(f"{BASE_URL}/mpk-fetched").mock(
-        return_value=httpx.Response(201, json={"id": "p-xyz"})
-    )
+    create = respx.post(f"{BASE_URL}/mpk-fetched").mock(return_value=httpx.Response(201, json={"id": "p-xyz"}))
     result = logged_in_client.create_post("T", "B")
     assert result.id == "p-xyz"
     assert pk.call_count == 1
@@ -51,13 +45,9 @@ def test_create_post_auto_fetches_post_key(logged_in_client):
 @respx.mock
 def test_create_post_explicit_key_skips_fetch(logged_in_client):
     pk = respx.get(f"{BASE_URL}/api/v1/post-key").mock(
-        return_value=httpx.Response(
-            200, json={"post_key": "mpk-x", "created_at": "2026-01-01T00:00:00Z"}
-        )
+        return_value=httpx.Response(200, json={"post_key": "mpk-x", "created_at": "2026-01-01T00:00:00Z"})
     )
-    respx.post(f"{BASE_URL}/mpk-explicit").mock(
-        return_value=httpx.Response(201, json={"id": "p-1"})
-    )
+    respx.post(f"{BASE_URL}/mpk-explicit").mock(return_value=httpx.Response(201, json={"id": "p-1"}))
     logged_in_client.create_post("T", "B", post_key="mpk-explicit")
     assert pk.call_count == 0
 
@@ -87,9 +77,7 @@ def test_create_post_title_too_long(logged_in_client):
 # U-P14: create_post carries NO Authorization header --------------------------
 @respx.mock
 def test_create_post_has_no_jwt_header(logged_in_client):
-    route = respx.post(f"{BASE_URL}/mpk-k").mock(
-        return_value=httpx.Response(201, json={"id": "p-1"})
-    )
+    route = respx.post(f"{BASE_URL}/mpk-k").mock(return_value=httpx.Response(201, json={"id": "p-1"}))
     logged_in_client.create_post("T", "B", post_key="mpk-k")
     sent = route.calls.last.request
     assert "authorization" not in {k.lower() for k in sent.headers}
@@ -98,9 +86,7 @@ def test_create_post_has_no_jwt_header(logged_in_client):
 # U-P6: get_post html returns str ---------------------------------------------
 @respx.mock
 def test_get_post_html(logged_in_client):
-    respx.get(f"{BASE_URL}/p-abc").mock(
-        return_value=httpx.Response(200, text="<html><h1>Hi</h1></html>")
-    )
+    respx.get(f"{BASE_URL}/p-abc").mock(return_value=httpx.Response(200, text="<html><h1>Hi</h1></html>"))
     result = logged_in_client.get_post("p-abc")
     assert isinstance(result, str)
     assert "<html>" in result
@@ -109,9 +95,7 @@ def test_get_post_html(logged_in_client):
 # U-P7: get_post raw returns markdown str -------------------------------------
 @respx.mock
 def test_get_post_raw(logged_in_client):
-    route = respx.get(f"{BASE_URL}/p-abc").mock(
-        return_value=httpx.Response(200, text="# Title\n\nbody")
-    )
+    route = respx.get(f"{BASE_URL}/p-abc").mock(return_value=httpx.Response(200, text="# Title\n\nbody"))
     result = logged_in_client.get_post("p-abc", format="raw")
     assert isinstance(result, str)
     assert result.startswith("# Title")
@@ -144,9 +128,7 @@ def test_list_posts_default_pagination(logged_in_client):
         return_value=httpx.Response(
             200,
             json={
-                "items": [
-                    {"id": 1, "qid": "p-a", "title": "A", "created_at": "2026-01-01T00:00:00Z"}
-                ],
+                "items": [{"id": 1, "qid": "p-a", "title": "A", "created_at": "2026-01-01T00:00:00Z"}],
                 "total": 1,
                 "page": 1,
                 "limit": 20,

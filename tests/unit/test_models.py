@@ -131,9 +131,7 @@ def test_extra_fields_ignored_in_page():
 
 # U-M3: datetime parsing -------------------------------------------------------
 def test_datetime_parsing():
-    obj = PostListItem.model_validate(
-        {"id": 1, "qid": "p-a", "title": "t", "created_at": "2026-07-24T12:00:00Z"}
-    )
+    obj = PostListItem.model_validate({"id": 1, "qid": "p-a", "title": "t", "created_at": "2026-07-24T12:00:00Z"})
     assert obj.created_at == datetime(2026, 7, 24, 12, 0, 0, tzinfo=timezone.utc)
 
 

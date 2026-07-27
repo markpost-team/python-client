@@ -29,9 +29,7 @@ async def test_async_full_flow(logged_in_async_client):
         return_value=httpx.Response(
             200,
             json={
-                "items": [
-                    {"id": 1, "qid": "p-1", "title": "T", "created_at": "2026-01-01T00:00:00Z"}
-                ],
+                "items": [{"id": 1, "qid": "p-1", "title": "T", "created_at": "2026-01-01T00:00:00Z"}],
                 "total": 1,
                 "page": 1,
                 "limit": 20,
@@ -66,9 +64,7 @@ async def test_async_lazy_auto_login_on_aenter():
 async def test_async_lazy_auto_login_on_first_call():
     respx.post(f"{BASE_URL}/api/v1/auth/login").mock(return_value=login_response())
     respx.get(f"{BASE_URL}/api/v1/posts").mock(
-        return_value=httpx.Response(
-            200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-        )
+        return_value=httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0})
     )
     client = AsyncMarkpost(BASE_URL, "alice", "secret")
     assert client._access_token is None
@@ -103,9 +99,7 @@ async def test_async_single_flight_refresh_once():
         # Yield so other coroutines pile up behind the asyncio.Lock.
         await _asyncio.sleep(0.05)
         refresh_calls += 1
-        result = RefreshTokenResult(
-            token="tok-access-2", refresh_token="tok-refresh-2", expires_in=3600
-        )
+        result = RefreshTokenResult(token="tok-access-2", refresh_token="tok-refresh-2", expires_in=3600)
         client._store_refresh(result)
         return result
 
@@ -124,9 +118,7 @@ async def test_async_401_auto_refresh_retries_once(logged_in_async_client):
     posts = respx.get(f"{BASE_URL}/api/v1/posts").mock(
         side_effect=[
             httpx.Response(401, json={"code": "unauthorized", "message": "expired"}),
-            httpx.Response(
-                200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-            ),
+            httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}),
         ]
     )
     result = await logged_in_async_client.list_posts()
@@ -147,9 +139,7 @@ async def test_async_retry_uses_anyio_sleep(logged_in_async_client, monkeypatch)
     respx.get(f"{BASE_URL}/api/v1/posts").mock(
         side_effect=[
             httpx.ConnectTimeout("down"),
-            httpx.Response(
-                200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-            ),
+            httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}),
         ]
     )
     await logged_in_async_client.list_posts()
@@ -163,9 +153,7 @@ async def test_async_proactive_refresh(logged_in_async_client):
     logged_in_async_client._token_expires_at = 0.0  # always "expiring"
     refresh = respx.post(f"{BASE_URL}/api/v1/auth/refresh").mock(return_value=refresh_response())
     respx.get(f"{BASE_URL}/api/v1/posts").mock(
-        return_value=httpx.Response(
-            200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-        )
+        return_value=httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0})
     )
     await logged_in_async_client.list_posts()
     assert refresh.call_count == 1
@@ -211,9 +199,7 @@ async def test_async_get_post_304(logged_in_async_client):
 @respx.mock
 async def test_async_get_post_key(logged_in_async_client):
     respx.get(f"{BASE_URL}/api/v1/post-key").mock(
-        return_value=httpx.Response(
-            200, json={"post_key": "mpk-z", "created_at": "2026-01-01T00:00:00Z"}
-        )
+        return_value=httpx.Response(200, json={"post_key": "mpk-z", "created_at": "2026-01-01T00:00:00Z"})
     )
     key = await logged_in_async_client.get_post_key()
     assert key == "mpk-z"
@@ -231,18 +217,14 @@ async def test_async_change_password(logged_in_async_client):
 
 @respx.mock
 async def test_async_logout_clears_tokens(logged_in_async_client):
-    respx.post(f"{BASE_URL}/api/v1/auth/logout").mock(
-        return_value=httpx.Response(200, json={"message": "bye"})
-    )
+    respx.post(f"{BASE_URL}/api/v1/auth/logout").mock(return_value=httpx.Response(200, json={"message": "bye"}))
     assert await logged_in_async_client.logout() is None
     assert logged_in_async_client._access_token is None
 
 
 @respx.mock
 async def test_async_health():
-    respx.get(f"{BASE_URL}/api/v1/health").mock(
-        return_value=httpx.Response(200, json={"status": "ok"})
-    )
+    respx.get(f"{BASE_URL}/api/v1/health").mock(return_value=httpx.Response(200, json={"status": "ok"}))
     client = AsyncMarkpost(BASE_URL)
     assert await client.health() == "ok"
 
@@ -404,9 +386,7 @@ async def test_async_delete_post(logged_in_async_client):
 @respx.mock
 async def test_async_create_post_auto_fetch_key(logged_in_async_client):
     respx.get(f"{BASE_URL}/api/v1/post-key").mock(
-        return_value=httpx.Response(
-            200, json={"post_key": "mpk-f", "created_at": "2026-01-01T00:00:00Z"}
-        )
+        return_value=httpx.Response(200, json={"post_key": "mpk-f", "created_at": "2026-01-01T00:00:00Z"})
     )
     respx.post(f"{BASE_URL}/mpk-f").mock(return_value=httpx.Response(201, json={"id": "p-1"}))
     result = await logged_in_async_client.create_post("T", "B")

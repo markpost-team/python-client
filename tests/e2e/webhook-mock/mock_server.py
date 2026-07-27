@@ -31,7 +31,7 @@ _received: list[dict] = []
 class _Handler(BaseHTTPRequestHandler):
     # The default BaseHTTPRequestHandler logs to stderr on every request, which
     # is noisy under load. Keep the access log quiet.
-    def log_message(self, fmt: str, *args: object) -> None:  # noqa: D401
+    def log_message(self, fmt: str, *args: object) -> None:
         return
 
     def _send(self, status: int, payload: object) -> None:
@@ -49,10 +49,10 @@ class _Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", "0") or "0")
         return self.rfile.read(length) if length else b""
 
-    def do_OPTIONS(self) -> None:  # noqa: N802 - http.server convention
+    def do_OPTIONS(self) -> None:
         self._send(200, {})
 
-    def do_POST(self) -> None:  # noqa: N802 - http.server convention
+    def do_POST(self) -> None:
         path = urlsplit(self.path).path
         # /webhooks/clear must be checked BEFORE the /webhook* prefix branch:
         # /webhooks/... also starts with /webhook, so the prefix match would
@@ -80,7 +80,7 @@ class _Handler(BaseHTTPRequestHandler):
             return
         self._send(404, {"error": "Not found"})
 
-    def do_GET(self) -> None:  # noqa: N802 - http.server convention
+    def do_GET(self) -> None:
         path = urlsplit(self.path).path
         if path == "/webhooks":
             self._send(200, _received)

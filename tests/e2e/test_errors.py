@@ -17,18 +17,16 @@ pytestmark = pytest.mark.e2e
 
 # E-ER1: unauthenticated request to a protected resource ----------------------
 def test_unauthenticated_returns_unauthorized(base_url):
-    with Markpost(base_url) as c:
-        with pytest.raises(AuthenticationError) as exc_info:
-            c.list_posts()
+    with Markpost(base_url) as c, pytest.raises(AuthenticationError) as exc_info:
+        c.list_posts()
     assert exc_info.value.status_code == 401
     assert exc_info.value.code == "unauthorized"
 
 
 # E-ER2: wrong password -------------------------------------------------------
 def test_wrong_password_code(base_url):
-    with Markpost(base_url) as c:
-        with pytest.raises(AuthenticationError) as exc_info:
-            c.login("markpost", "wrong")
+    with Markpost(base_url) as c, pytest.raises(AuthenticationError) as exc_info:
+        c.login("markpost", "wrong")
     assert exc_info.value.code == "invalid_credentials"
 
 

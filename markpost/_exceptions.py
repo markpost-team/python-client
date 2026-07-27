@@ -18,13 +18,10 @@ Layout (SPEC §8)::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict
-
-if TYPE_CHECKING:
-    pass
 
 
 class MarkpostError(Exception):
@@ -83,9 +80,8 @@ class APIError(MarkpostError):
             code = code if code is not None else body.get("code")
             if message is None:
                 message = body.get("message") or ""
-        else:
-            if message is None:
-                message = ""
+        elif message is None:
+            message = ""
 
         if not message:
             message = response.text or ""

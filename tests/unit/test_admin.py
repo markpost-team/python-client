@@ -72,9 +72,7 @@ def test_admin_list_posts_with_search(logged_in_client):
 # U-AD3: admin_delete_post -----------------------------------------------------
 @respx.mock
 def test_admin_delete_post(logged_in_client):
-    route = respx.delete(f"{BASE_URL}/api/v1/admin/posts/p-a").mock(
-        return_value=httpx.Response(204)
-    )
+    route = respx.delete(f"{BASE_URL}/api/v1/admin/posts/p-a").mock(return_value=httpx.Response(204))
     assert logged_in_client.admin_delete_post("p-a") is None
     assert route.called
 

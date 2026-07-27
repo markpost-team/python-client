@@ -219,7 +219,7 @@ class _BaseClient(Generic[_HttpxClientT]):
         """Exponential backoff with jitter (SPEC §9.2).
 
         If the backend gave a ``RateLimit-Reset`` and it's within (0, 60]s, honor
-        it directly; otherwise ``min(BASE * 2**n, MAX)`` scaled by 0.75–1.0 jitter.
+        it directly; otherwise ``min(BASE * 2**n, MAX)`` scaled by 0.75-1.0 jitter.
         """
         if isinstance(exc, RateLimitError) and exc.reset is not None:
             if 0 < exc.reset <= TOKEN_REFRESH_MARGIN:

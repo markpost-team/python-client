@@ -126,9 +126,7 @@ def test_single_flight_refresh_once_under_threads():
         time.sleep(0.05)
         with refresh_calls_lock:
             refresh_calls += 1
-        result = RefreshTokenResult(
-            token="tok-access-2", refresh_token="tok-refresh-2", expires_in=3600
-        )
+        result = RefreshTokenResult(token="tok-access-2", refresh_token="tok-refresh-2", expires_in=3600)
         client._store_refresh(result)
         return result
 
@@ -141,7 +139,7 @@ def test_single_flight_refresh_once_under_threads():
         try:
             ok = client._force_refresh(stale_generation=0)
             results.append(ok)
-        except BaseException as e:  # noqa: BLE001
+        except BaseException as e:
             errors.append(e)
 
     threads = [threading.Thread(target=worker) for _ in range(8)]
@@ -184,9 +182,7 @@ def test_auto_login_on_construction():
 # U-A9: logout clears tokens ---------------------------------------------------
 @respx.mock
 def test_logout_clears_tokens(logged_in_client):
-    respx.post(f"{BASE_URL}/api/v1/auth/logout").mock(
-        return_value=httpx.Response(200, json={"message": "bye"})
-    )
+    respx.post(f"{BASE_URL}/api/v1/auth/logout").mock(return_value=httpx.Response(200, json={"message": "bye"}))
     assert logged_in_client.logout() is None
     assert logged_in_client._access_token is None
     assert logged_in_client._refresh_token is None
@@ -220,9 +216,7 @@ def test_change_password_too_short(logged_in_client):
 @respx.mock
 def test_get_post_key_caches(logged_in_client):
     respx.get(f"{BASE_URL}/api/v1/post-key").mock(
-        return_value=httpx.Response(
-            200, json={"post_key": "mpk-abcdef", "created_at": "2026-01-01T00:00:00Z"}
-        )
+        return_value=httpx.Response(200, json={"post_key": "mpk-abcdef", "created_at": "2026-01-01T00:00:00Z"})
     )
     key = logged_in_client.get_post_key()
     assert key == "mpk-abcdef"
@@ -236,9 +230,7 @@ def test_401_auto_refresh_retries_once(logged_in_client):
     posts = respx.get(f"{BASE_URL}/api/v1/posts").mock(
         side_effect=[
             httpx.Response(401, json={"code": "unauthorized", "message": "expired"}),
-            httpx.Response(
-                200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-            ),
+            httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}),
         ]
     )
     result = logged_in_client.list_posts()
@@ -264,9 +256,7 @@ def test_401_after_refresh_still_fails(logged_in_client):
 def test_proactive_refresh_before_request(near_expiry_client):
     refresh = respx.post(f"{BASE_URL}/api/v1/auth/refresh").mock(return_value=refresh_response())
     respx.get(f"{BASE_URL}/api/v1/posts").mock(
-        return_value=httpx.Response(
-            200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0}
-        )
+        return_value=httpx.Response(200, json={"items": [], "total": 0, "page": 1, "limit": 20, "total_pages": 0})
     )
     near_expiry_client.list_posts()
     # Proactive refresh fired before the request went out.

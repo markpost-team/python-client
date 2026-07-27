@@ -252,12 +252,7 @@ class AsyncMarkpost(_BaseClient[httpx.AsyncClient]):
             if allow_304 and response.status_code == 304:
                 return None
 
-            if (
-                response.status_code == 401
-                and auth == "jwt"
-                and self._refresh_token
-                and not retried_401
-            ):
+            if response.status_code == 401 and auth == "jwt" and self._refresh_token and not retried_401:
                 retried_401 = True
                 if await self._force_refresh(sent_generation):
                     continue
@@ -419,7 +414,7 @@ class AsyncMarkpost(_BaseClient[httpx.AsyncClient]):
             "PATCH",
             f"/api/v1/delivery/channels/{id}",
             auth="jwt",
-            json=fields if fields else None,
+            json=fields or None,
             model=_ChannelWrapper,
         )
         return data.channel
@@ -491,9 +486,7 @@ class AsyncMarkpost(_BaseClient[httpx.AsyncClient]):
             model=Page[AdminUser],
         )
 
-    async def admin_list_posts(
-        self, search: str = "", page: int = 1, limit: int = 20
-    ) -> Page[AdminPost]:
+    async def admin_list_posts(self, search: str = "", page: int = 1, limit: int = 20) -> Page[AdminPost]:
         params: dict[str, Any] = {"page": page, "limit": limit}
         if search:
             params["search"] = search
@@ -522,9 +515,7 @@ class AsyncMarkpost(_BaseClient[httpx.AsyncClient]):
             model=Page[AdminChannel],
         )
 
-    async def admin_list_delivery_history(
-        self, page: int = 1, limit: int = 20
-    ) -> Page[DeliveryHistoryItem]:
+    async def admin_list_delivery_history(self, page: int = 1, limit: int = 20) -> Page[DeliveryHistoryItem]:
         return await self._request(
             "GET",
             "/api/v1/admin/delivery/history",

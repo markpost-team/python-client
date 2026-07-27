@@ -272,12 +272,7 @@ class Markpost(_BaseClient[httpx.Client]):
             # Reactive single-flight: a 401 on a JWT request triggers ONE
             # forced refresh and ONE retry (guarded by ``retried_401``). The
             # generation guard prevents concurrent 401s from each refreshing.
-            if (
-                response.status_code == 401
-                and auth == "jwt"
-                and self._refresh_token
-                and not retried_401
-            ):
+            if response.status_code == 401 and auth == "jwt" and self._refresh_token and not retried_401:
                 retried_401 = True
                 if self._force_refresh(sent_generation):
                     continue
@@ -457,7 +452,7 @@ class Markpost(_BaseClient[httpx.Client]):
             "PATCH",
             f"/api/v1/delivery/channels/{id}",
             auth="jwt",
-            json=fields if fields else None,
+            json=fields or None,
             model=_ChannelWrapper,
         )
         return data.channel
@@ -558,9 +553,7 @@ class Markpost(_BaseClient[httpx.Client]):
             model=Page[AdminChannel],
         )
 
-    def admin_list_delivery_history(
-        self, page: int = 1, limit: int = 20
-    ) -> Page[DeliveryHistoryItem]:
+    def admin_list_delivery_history(self, page: int = 1, limit: int = 20) -> Page[DeliveryHistoryItem]:
         return self._request(
             "GET",
             "/api/v1/admin/delivery/history",
